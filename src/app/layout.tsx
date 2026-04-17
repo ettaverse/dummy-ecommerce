@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { MSWProvider } from "@/mocks/MSWProvider";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { Navbar } from "@/components/Navbar";
 
 const geistSans = Geist({
@@ -32,10 +33,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <MSWProvider>
-          <CartProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-          </CartProvider>
+          <AuthProvider>
+            <CartProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+            </CartProvider>
+          </AuthProvider>
         </MSWProvider>
       </body>
     </html>

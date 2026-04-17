@@ -39,6 +39,8 @@ PORT=4000 npm start
 | `/cart` | Shopping cart with quantity controls |
 | `/checkout` | Checkout form with shipping and payment validation |
 | `/order-confirmation?orderId=...` | Order confirmation page |
+| `/login` | Login page (email + password) |
+| `/signup` | Signup page (name + email + password + confirm password) |
 
 ## Features Available for Testing
 
@@ -84,6 +86,29 @@ PORT=4000 npm start
 | Expiry Date | Required, MM/YY format |
 | CVV | Required, 3 or 4 digits |
 
+### Login (`/login`)
+- Email + password fields
+- Client-side validation (required + email format)
+- Server-side credential check against `src/data/users.json`
+- On success: stores session token in `localStorage` under key `shopdemo_auth_token`, redirects to `/`
+- On failure: shows inline field errors or a general "Invalid email or password" message
+- Link to `/signup` for new users
+
+### Signup (`/signup`)
+- Name + email + password + confirm password fields
+- Client-side validation: all fields required, email format, password ≥ 6 chars, confirm must match password
+- Server-side validation: duplicate email detection against `src/data/users.json` (plus runtime-registered users)
+- On success: user is automatically logged in, redirects to `/`
+- Link to `/login` for existing users
+
+### Signup Validation Rules
+| Field | Rule |
+|-------|------|
+| Name | Required |
+| Email | Required, valid email format, must not already exist |
+| Password | Required, minimum 6 characters |
+| Confirm Password | Required, must match password |
+
 ## API Endpoints (Mocked via MSW)
 
 All endpoints are intercepted by MSW in the browser — no real HTTP requests leave the app.
@@ -97,6 +122,10 @@ All endpoints are intercepted by MSW in the browser — no real HTTP requests le
 | `PATCH` | `/api/cart/:id` | Update quantity (`{ quantity }`) |
 | `DELETE` | `/api/cart/:id` | Remove item from cart |
 | `POST` | `/api/checkout` | Submit order (`{ shipping, payment }`) |
+| `POST` | `/api/auth/signup` | Create user (`{ name, email, password }`) — 201 with `{ user, token }` on success, 400 with `{ errors }` on validation failure |
+| `POST` | `/api/auth/login` | Log in (`{ email, password }`) — 200 with `{ user, token }` on success, 401 `{ error }` on bad credentials |
+| `POST` | `/api/auth/logout` | Clear server-side session (requires `Authorization: Bearer <token>` header) |
+| `GET` | `/api/auth/me` | Get current user (requires `Authorization: Bearer <token>` header) — 401 if not authenticated |
 
 ### Sort Options
 - `price_asc` — Price: Low to High
@@ -175,13 +204,66 @@ All endpoints are intercepted by MSW in the browser — no real HTTP requests le
 | `order-id` | Order ID display |
 | `continue-shopping-link` | Continue Shopping button |
 
+### Navigation (Auth)
+| Selector | Element |
+|----------|---------|
+| `nav-login-link` | "Log In" link in navbar (visible when signed out) |
+| `nav-signup-link` | "Sign Up" button in navbar (visible when signed out) |
+| `user-greeting` | "Hi, {name}" text in navbar (visible when signed in) |
+| `logout-button` | "Log Out" button in navbar (visible when signed in) |
+| `auth-loading` | Loading placeholder while auth state is restoring |
+
+### Login (`/login`)
+| Selector | Element |
+|----------|---------|
+| `login-heading` | Page heading |
+| `login-form` | The login form |
+| `login-email` | Email input |
+| `login-password` | Password input |
+| `login-submit-button` | Log In button |
+| `login-error` | General error message (e.g., "Invalid email or password") |
+| `field-error-login-email` | Email field validation error |
+| `field-error-login-password` | Password field validation error |
+| `signup-link` | Link to signup page on the login form |
+
+### Signup (`/signup`)
+| Selector | Element |
+|----------|---------|
+| `signup-heading` | Page heading |
+| `signup-form` | The signup form |
+| `signup-name` | Full Name input |
+| `signup-email` | Email input |
+| `signup-password` | Password input |
+| `signup-confirm-password` | Confirm Password input |
+| `signup-submit-button` | Sign Up button |
+| `signup-error` | General error message |
+| `field-error-signup-name` | Name field validation error |
+| `field-error-signup-email` | Email field validation error |
+| `field-error-signup-password` | Password field validation error |
+| `field-error-signup-confirm-password` | Confirm password field validation error |
+| `login-link` | Link to login page on the signup form |
+
 ## Mock Data
 
 The app uses 14 deterministic products with stable IDs (`prod-001` through `prod-014`). Product `prod-008` (Wool Beanie) is marked as out-of-stock for testing disabled states.
+
+## Seeded Login Credentials
+
+The app ships with pre-seeded user accounts defined in [`src/data/users.json`](src/data/users.json). Use any of these for login tests:
+
+| Email | Password | Name |
+|-------|----------|------|
+| `demo@shopdemo.com` | `Demo@123` | Demo User |
+| `jane.smith@example.com` | `Jane@2024` | Jane Smith |
+| `john.doe@example.com` | `John@2024` | John Doe |
+| `admin@shopdemo.com` | `Admin@123` | Test Admin |
+
+Users created via `/signup` (or `POST /api/auth/signup`) are added to an in-memory store on top of the seeded list and persist until the MSW worker is reloaded (e.g., full page refresh that reloads the service worker, or server restart).
 
 ## Notes
 
 - **No real backend**: All data is served by MSW's service worker in the browser
 - **Cart resets on page reload**: Cart state lives in MSW's in-memory handler, not persistent storage
+- **Auth session persists across reloads**: The login token is stored in `localStorage` under `shopdemo_auth_token` and restored by calling `GET /api/auth/me`. Seeded users stay logged in across page reloads because their IDs live in `users.json` and the token encodes the user ID. Users registered at runtime via `/signup` are lost on full worker reload — their session becomes an unknown user and `GET /api/auth/me` returns 401.
 - **Deterministic data**: Product IDs, names, and prices are fixed — safe for assertions in tests
 - **Images**: Placeholder images from `placehold.co` (no external API dependency)

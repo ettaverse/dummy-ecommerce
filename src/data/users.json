@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "id": "user-001",
+      "name": "Demo User",
+      "email": "demo@shopdemo.com",
+      "password": "Demo@123"
+    },
+    {
+      "id": "user-002",
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "password": "Jane@2024"
+    },
+    {
+      "id": "user-003",
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "password": "John@2024"
+    },
+    {
+      "id": "user-004",
+      "name": "Test Admin",
+      "email": "admin@shopdemo.com",
+      "password": "Admin@123"
+    }
+  ]
+}
